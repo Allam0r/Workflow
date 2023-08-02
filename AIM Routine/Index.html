@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Routine AimLab</title>
+    <style>
+        body {
+            font-family: Montserrat, sans-serif;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+
+        .popup {
+            background-color: #fff;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            z-index: 2;
+        }
+
+        .popup h2 {
+            margin-top: 0;
+        }
+
+        /* Styles pour les boutons */
+        button {
+            margin-right: 30px;
+        }
+
+        /* Styles pour les tableaux */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+            margin-top: 30px;
+        }
+
+        th,
+        td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Routine AimLab</h1>
+    <button onclick="ouvrirPopup()">Ajouter une nouvelle ligne</button>
+    <button onclick="confirmerReset()">Réinitialiser les données</button>
+
+    <div class="overlay" id="overlay">
+        <div class="popup">
+            <form id="formulaire">
+                <label for="date">Date :</label>
+                <input type="date" id="date" required><br><br>
+
+                <label for="exercice">Exercice :</label>
+                <select id="exercice" required>
+                    <option value="">-- Choisissez un exercice --</option>
+                    <option value="VT x WHJ Smooth Strafe Sphere">VT x WHJ Smooth Strafe Sphere</option>
+                    <option value="VT 3T Wide">VT 3T Wide</option>
+                    <option value="VT x WHJ 5 Sphere Hipfire Small">VT x WHJ 5 Sphere Hipfire Small</option>
+                    <option value="VT Dynamic Reflex Micro">VT Dynamic Reflex Micro</option>
+                </select><br><br>
+
+                <label for="meilleurScore">Meilleur Score :</label>
+                <input type="number" id="meilleurScore" required><br><br>
+
+                <label for="pourcentagePrecision">Pourcentage de Précision :</label>
+                <input type="number" id="pourcentagePrecision" required><br><br>
+
+                <input type="submit" value="Ajouter">
+                <button type="button" onclick="fermerPopup()">Annuler</button>
+            </form>
+        </div>
+    </div>
+
+    <br>
+
+    <div id="tableaux"></div>
+
+    <script>
+        const overlay = document.getElementById("overlay");
+        const formulaire = document.getElementById("formulaire");
+        formulaire.addEventListener("submit", function (event) {
+            event.preventDefault();
+            ajouterLigne();
+            fermerPopup();
+            formulaire.reset();
+        });
+
+        function ouvrirPopup() {
+            overlay.style.display = "block";
+        }
+
+        function fermerPopup() {
+            overlay.style.display = "none";
+        }
+
+        function ajouterLigne() {
+            const date = document.getElementById("date").value;
+            const exercice = document.getElementById("exercice").value;
+            const meilleurScore = document.getElementById("meilleurScore").value;
+            const pourcentagePrecision = document.getElementById("pourcentagePrecision").value;
+
+            if (date && exercice && meilleurScore && pourcentagePrecision) {
+                const rowData = [formatDate(date), exercice, meilleurScore, pourcentagePrecision + "%"];
+                let tableData = localStorage.getItem("tableData");
+                if (tableData) {
+                    tableData = JSON.parse(tableData);
+                } else {
+                    tableData = {};
+                }
+
+                // Vérifier si une date identique existe déjà dans les données
+                if (tableData.hasOwnProperty(date)) {
+                    tableData[date].push(rowData);
+                } else {
+                    tableData[date] = [rowData];
+                }
+
+                localStorage.setItem("tableData", JSON.stringify(tableData));
+                afficherTableaux();
+            } else {
+                alert("Veuillez remplir tous les champs avant d'ajouter une ligne !");
+            }
+        }
+
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const date = new Date(dateString);
+            return date.toLocaleDateString(undefined, options);
+        }
+
+        function afficherTableaux() {
+            const tableauxDiv = document.getElementById("tableaux");
+            tableauxDiv.innerHTML = "";
+
+            const tableData = localStorage.getItem("tableData");
+            if (tableData) {
+                const parsedData = JSON.parse(tableData);
+                for (const date in parsedData) {
+                    if (parsedData.hasOwnProperty(date)) {
+                        const table = document.createElement("table");
+                        table.style.marginBottom = "20px";
+                        table.innerHTML = `
+              <tr>
+                <th>Date</th>
+                <th>Exercice</th>
+                <th>Meilleur Score</th>
+                <th>Pourcentage de Précision</th>
+              </tr>
+            `;
+                        for (const rowData of parsedData[date]) {
+                            const newRow = table.insertRow(-1);
+                            for (let i = 0; i < rowData.length; i++) {
+                                const cell = newRow.insertCell(i);
+                                cell.innerHTML = rowData[i];
+                            }
+                        }
+                        tableauxDiv.appendChild(table);
+                    }
+                }
+            }
+        }
+
+        function modifierLigne(rowIndex) {
+            const tableData = JSON.parse(localStorage.getItem("tableData"));
+            const date = tableData[rowIndex][0];
+            const exercice = tableData[rowIndex][1];
+            const meilleurScore = tableData[rowIndex][2];
+            const pourcentagePrecision = tableData[rowIndex][3].replace("%", "");
+
+            document.getElementById("date").value = date;
+            document.getElementById("exercice").value = exercice;
+            document.getElementById("meilleurScore").value = meilleurScore;
+            document.getElementById("pourcentagePrecision").value = pourcentagePrecision;
+
+            ouvrirPopup();
+
+            document.getElementById("formulaire").onsubmit = function (event) {
+                event.preventDefault();
+                const newDate = document.getElementById("date").value;
+                const newExercice = document.getElementById("exercice").value;
+                const newMeilleurScore = document.getElementById("meilleurScore").value;
+                const newPourcentagePrecision = document.getElementById("pourcentagePrecision").value;
+
+                if (newDate && newExercice && newMeilleurScore && newPourcentagePrecision) {
+                    tableData[rowIndex][0] = newDate;
+                    tableData[rowIndex][1] = newExercice;
+                    tableData[rowIndex][2] = newMeilleurScore;
+                    tableData[rowIndex][3] = newPourcentagePrecision + "%";
+
+                    localStorage.setItem("tableData", JSON.stringify(tableData));
+                    afficherTableaux();
+                    fermerPopup();
+                } else {
+                    alert("Veuillez remplir tous les champs avant de modifier la ligne !");
+                }
+            };
+        }
+
+        function confirmerReset() {
+            const confirmation = window.confirm("Êtes-vous sûr de vouloir réinitialiser toutes les données ?");
+            if (confirmation) {
+                resetDonnees();
+            }
+        }
+
+        function resetDonnees() {
+            localStorage.removeItem("tableData");
+            afficherTableaux();
+        }
+
+        // Charger les données depuis le stockage local lors du chargement de la page
+        window.onload = function () {
+            afficherTableaux();
+        };
+    </script>
+</body>
+
+</html>
